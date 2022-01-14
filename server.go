@@ -131,9 +131,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a Track item for each returned track from the search 
-	// and write as JSON array
+	// and write as an array of JSON objects
 	var track Track
 	count := 0
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, "[")
     for results.Next() {
 		if err = results.Scan(&track.TrackId, &track.Name, &track.Artist, 
@@ -145,16 +146,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 				return
 			}	
 
-		trackJSON, err := json.Marshal(&track)
+		trackJSON, err := json.MarshalIndent(&track, "", "    ")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Println("500 Error: Encoding error")
 			return
 		} else {
+			// On first iteration, omit comma for array
 			if count == 0 {
 				fmt.Fprintf(w, "%s", trackJSON)
 			} else {
-				fmt.Fprintf(w, ",%s", trackJSON)
+				fmt.Fprintf(w, ",\n%s", trackJSON)
 			}
 			count = count + 1
 		}
