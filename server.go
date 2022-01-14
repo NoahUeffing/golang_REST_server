@@ -1,3 +1,8 @@
+/* 
+A basic Go server used to query tracks from the Chinook_Sqlite database. 
+Written by Noah Ueffing 
+*/
+
 package main
 
 import (
@@ -10,6 +15,7 @@ import (
     _ "github.com/mattn/go-sqlite3"
 )
 
+// struct used for converting track data to json form
 type Track struct {
     TrackId NullInt64 `json:"TrackId"`
     Name NullString `json:"Name"`
@@ -47,7 +53,7 @@ func (ns *NullString) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ns.String)
 }
 
-// MarshalJSON for NullString
+// MarshalJSON for NullInt64
 func (ni *NullInt64) MarshalJSON() ([]byte, error) {
 	if !ni.Valid {
 		return []byte("null"), nil
@@ -55,7 +61,7 @@ func (ni *NullInt64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ni.Int64)
 }
 
-// MarshalJSON for NullString
+// MarshalJSON for NullFloat64
 func (nf *NullFloat64) MarshalJSON() ([]byte, error) {
 	if !nf.Valid {
 		return []byte("null"), nil
@@ -63,53 +69,76 @@ func (nf *NullFloat64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nf.Float64)
 }
 
+// Request handler function for search queries
 func handler(w http.ResponseWriter, r *http.Request) {
+	// Set log ouput to Stdout
 	log.SetOutput(os.Stdout)
+
+	// Make sure the request is a GET request, otherwise give error
 	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed) // Return 405 Method Not Allowed.
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		log.Println("405 Error: Method not allowed")
 		return
 	}
-	// URL search term keys
+	// Read the URL for search parameter
 	keys, ok := r.URL.Query()["search"]
 
+	// Error checking for search parameter
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Println("400 Error: Bad request")
 		return
 	}
 
+	// If search parameter is empty, give error
 	if len(keys[0]) < 1 {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Println("400 Error: No valid search criteria")
 		return
 	}
 
-	// Query()["key"] will return an array of items, 
-	// we only want the single item.
+	// Query()["key"] will return an array of parameters, 
+	// we only want a single parameter string
 	key := keys[0]
 
+	// log the recieved search query
 	log.Println("Received search query for: " + string(key))
 
-    // Open up our database connection.
+    // Open the database connection
     db, err := sql.Open("sqlite3", "./Chinook_Sqlite.sqlite")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("500 Error: Database connection error")
 		return
 	}
-	// query)
-	results, err := db.Query("SELECT track.TrackId, track.Name, artist.Name, album.Title, track.AlbumId, track.MediaTypeId, track.GenreId, track.Composer, track.Milliseconds, track.Bytes, track.UnitPrice FROM track INNER JOIN album ON track.AlbumId = album.AlbumId INNER JOIN artist ON album.ArtistId = artist.ArtistId WHERE track.Name LIKE '%" + string(key) + "%'")
+
+	// Create the query
+	query := "SELECT track.TrackId, track.Name, artist.Name, album.Title, " + 
+	"track.AlbumId, track.MediaTypeId, track.GenreId, track.Composer, " + 
+	"track.Milliseconds, track.Bytes, track.UnitPrice " + 
+	"FROM track " + 
+	"INNER JOIN album ON track.AlbumId = album.AlbumId " +
+	"INNER JOIN artist ON album.ArtistId = artist.ArtistId " + 
+	"WHERE track.Name LIKE '%" + string(key) + "%'"
+
+	// Search the database
+	results, err := db.Query(query)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("500 Error: Database error")
 		return
 	}
+
+	// Create a Track item for each returned track from the search 
+	// and write as JSON array
 	var track Track
+	count := 0
 	fmt.Fprintf(w, "[")
     for results.Next() {
-		if err = results.Scan(&track.TrackId, &track.Name, &track.Artist, &track.Album, &track.AlbumId, &track.MediaTypeId, &track.GenreId,
-			&track.Composer, &track.Milliseconds, &track.Bytes, &track.UnitPrice); err != nil {
+		if err = results.Scan(&track.TrackId, &track.Name, &track.Artist, 
+			&track.Album, &track.AlbumId, &track.MediaTypeId, &track.GenreId,
+			&track.Composer, &track.Milliseconds, &track.Bytes, 
+			&track.UnitPrice); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Println("500 Error: Server error")
 				return
@@ -121,7 +150,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			log.Println("500 Error: Encoding error")
 			return
 		} else {
-			fmt.Fprintf(w, "%s,", trackJSON)
+			if count == 0 {
+				fmt.Fprintf(w, "%s", trackJSON)
+			} else {
+				fmt.Fprintf(w, ",%s", trackJSON)
+			}
+			count = count + 1
 		}
 	}
 
@@ -132,12 +166,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// Function used to pass favicon
 func faviconHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./note.ico")
 }
 
+// Driver function
 func main() {
+	// Pass favicon
 	http.HandleFunc("/favicon.ico", faviconHandler)
+
+	// Function to handle incoming requests
 	http.HandleFunc("/", handler)
+
+	// Listen for request on port 4041
 	log.Fatal(http.ListenAndServe(":4041", nil))
 }
