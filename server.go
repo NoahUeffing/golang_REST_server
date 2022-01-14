@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"database/sql"
 	"encoding/json"
+	"strings"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -70,6 +71,12 @@ func (nf *NullFloat64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nf.Float64)
 }
 
+// Function to send http error response and print error message to log
+func errorHandler(w http.ResponseWriter, status int, message string) {
+	w.WriteHeader(status)
+	log.Println(message)
+}
+
 // Request handler function for search queries
 func handler(w http.ResponseWriter, r *http.Request) {
 	// Set log ouput to Stdout
@@ -77,8 +84,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the request is a GET request, otherwise give error
 	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		log.Println("405 Error: Method not allowed")
+		errorHandler(w, http.StatusMethodNotAllowed, 
+			"405 Error: Method not allowed")
 		return
 	}
 	// Read the URL for search parameter
@@ -86,21 +93,22 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// Error checking for search parameter
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		log.Println("400 Error: Bad request")
+		errorHandler(w, http.StatusBadRequest, "400 Error: Bad request")
 		return
 	}
 
 	// If search parameter is empty, give error
 	if len(keys[0]) < 1 {
-		w.WriteHeader(http.StatusBadRequest)
-		log.Println("400 Error: No valid search criteria")
+		errorHandler(w, http.StatusBadRequest, 
+			"400 Error: No valid search criteria")
 		return
 	}
 
 	// Query()["key"] will return an array of parameters, 
 	// we only want a single parameter string
 	key := keys[0]
+	// Replace ' with '' for SQL query functionality
+	key = strings.Replace(key, "'", "''", -1) 
 
 	// log the recieved search query
 	log.Println("Received search query for: " + string(key))
@@ -108,8 +116,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Open the database connection
 	db, err := sql.Open("sqlite3", "./Chinook_Sqlite.sqlite")
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Println("500 Error: Database connection error")
+		errorHandler(w, http.StatusInternalServerError, 
+			"500 Error: Database connection error")
 		return
 	}
 
@@ -125,8 +133,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Search the database
 	results, err := db.Query(query)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Println("500 Error: Database error")
+		errorHandler(w, http.StatusInternalServerError, 
+			"500 Error: Database error")
 		return
 	}
 
@@ -141,25 +149,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			&track.Album, &track.AlbumId, &track.MediaTypeId, &track.GenreId,
 			&track.Composer, &track.Milliseconds, &track.Bytes, 
 			&track.UnitPrice); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				log.Println("500 Error: Server error")
+				errorHandler(w, http.StatusInternalServerError, 
+					"500 Error: Server error")
 				return
 			}	
 
 		trackJSON, err := json.MarshalIndent(&track, "", "    ")
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			log.Println("500 Error: Encoding error")
+			errorHandler(w, http.StatusInternalServerError, 
+				"500 Error: Encoding error")
 			return
-		} else {
-			// On first iteration, omit comma for array
-			if count == 0 {
-				fmt.Fprintf(w, "%s", trackJSON)
-			} else {
-				fmt.Fprintf(w, ",\n%s", trackJSON)
-			}
-			count = count + 1
 		}
+		// On first iteration, omit comma for array
+		if count == 0 {
+			fmt.Fprintf(w, "%s", trackJSON)
+		} else {
+			fmt.Fprintf(w, ",\n%s", trackJSON)
+		}
+		count = count + 1
 	}
 
 	fmt.Fprintf(w, "]")

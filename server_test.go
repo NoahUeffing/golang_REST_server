@@ -137,12 +137,33 @@ func TestHandler(t *testing.T) {
 
 	ResponseCodeTest(rec5, req5, err5, http.StatusBadRequest, t)	
 
-	// Request 6: Ensure correct behaviour when sending unsupported characters for database query
+	// Request 6: Ensure correct behaviour when sending apostrophe for database query
 	// Create a ResponseRecorder to record the response.
 	rec6 := httptest.NewRecorder()
 
 	// Create a request to pass to our handler. 
-	req6, err6 := http.NewRequest(http.MethodGet, "http://localhost4041/?search=don%27t", nil)
+	req6, err6 := http.NewRequest(http.MethodGet, "http://localhost4041/?search=please%20don%27t%20touch", nil)
 	
-	ResponseCodeTest(rec6, req6, err6, http.StatusInternalServerError, t)	
+	ResponseCodeTest(rec6, req6, err6, http.StatusOK, t)
+	
+	// Get content type
+	ctype3 := rec6.Header().Get("Content-Type")
+
+	// expected body to check against response body
+	// Must be four spaces from margin (not tab) to correctly match output from server.go
+	expected3 := `[{
+    "TrackId": 1955,
+    "Name": "Please Don't Touch",
+    "Artist": "Motörhead",
+    "Album": "Ace Of Spades",
+    "AlbumId": 160,
+    "MediaTypeId": 1,
+    "GenreId": 3,
+    "Composer": "Heath/Robinson",
+    "Milliseconds": 169926,
+    "Bytes": 5557002,
+    "UnitPrice": 0.99
+}]`
+	
+	ResponseJSONTest(rec6, ctype3, expected3, t)
 }

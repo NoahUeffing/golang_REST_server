@@ -20,8 +20,7 @@ All track names that contain the search parameter will be given in JSON array.
 
 Log will display recieved and completed search queries as well as error codes for failed requests.
 
-Note that "%20" is used to denote spaces in the URL search parameter.
-Currently other URL character encoding is not supported (ex. %22 for double quotes, %27 for apostrophe, etc.).
+Note that "%20" is used to denote spaces in the URL search parameter, %27 for apostrophe, %3B for semicolon etc. See all character encodings [here.](https://www.w3schools.com/tags/ref_urlencode.ASP)
 
 # Details:
 
