@@ -16,8 +16,23 @@ func ResponseCodeTest(rec *httptest.ResponseRecorder, req *http.Request, err err
 
 	// Check the status code is expected code
 	if rec.Code != status {
-		t.Errorf("handler returned wrong status code: got %v want %v",
+		t.Errorf("handler returned wrong status code: \n\ngot\n\n%v\n\nwant\n\n%v",
 			rec.Code, status)
+	}
+}
+
+// Function to check the if content from JSON response matches expected
+func ResponseJSONTest(rec *httptest.ResponseRecorder, ctype string, expected string, t *testing.T) {
+	// Check content type
+	if ctype != "application/json" {
+		t.Errorf("content type header does not match: \n\ngot\n\n%v\n\nwant\n\n%v",
+			ctype, "application/json")
+	}
+
+	// Check body of response
+	if rec.Body.String() != expected {
+		t.Errorf("handler returned unexpected body. \n\ngot:\n\n%v\n\nwant\n\n%v",
+			rec.Body.String(), expected)
 	}
 }
 
@@ -31,12 +46,10 @@ func TestHandler(t *testing.T) {
 
 	ResponseCodeTest(rec1, req1, err1, http.StatusOK, t)
 
-	// Check that Content-Type = application/json
-	if ctype := rec1.Header().Get("Content-Type"); ctype != "application/json" {
-		t.Errorf("content type header does not match: \n\ngot\n\n %v \n\nwant\n\n %v",
-			ctype, "application/json")
-	}
-	// Check the response body vs expected body
+	// Get content type
+	ctype1 := rec1.Header().Get("Content-Type");
+
+	// expected body to check against response body
 	// Must be four spaces from margin (not tab) to correctly match output from server.go
     expected1 := `[{
     "TrackId": 1134,
@@ -51,10 +64,8 @@ func TestHandler(t *testing.T) {
     "Bytes": 17875209,
     "UnitPrice": 0.99
 }]`
-	if rec1.Body.String() != expected1 {
-		t.Errorf("handler returned unexpected body. got:\n\n%v\n\nwant\n\n%v",
-			rec1.Body.String(), expected1)
-	}
+
+	ResponseJSONTest(rec1, ctype1, expected1, t)
 
 	// Request 2: Ensure correct behaviour when searching for "London"
 	// Create a ResponseRecorder to record the response.
@@ -65,12 +76,10 @@ func TestHandler(t *testing.T) {
 	
 	ResponseCodeTest(rec2, req2, err2, http.StatusOK, t)
 
-	// Check that Content-Type = application/json
-	if ctype := rec2.Header().Get("Content-Type"); ctype != "application/json" {
-		t.Errorf("content type header does not match: \n\ngot\n\n %v \n\nwant\n\n %v",
-			ctype, "application/json")
-	}
-	// Check the response body vs expected body
+	// Get content type
+	ctype2 := rec2.Header().Get("Content-Type")
+
+	// expected body to check against response body
 	// Must be four spaces from margin (not tab) to correctly match output from server.go
 	expected2 := `[{
     "TrackId": 2599,
@@ -98,10 +107,8 @@ func TestHandler(t *testing.T) {
     "Bytes": 10085867,
     "UnitPrice": 0.99
 }]`
-	if rec2.Body.String() != expected2 {
-        t.Errorf("handler returned unexpected body. got:\n\n%v\n\nwant\n\n%v",
-            rec2.Body.String(), expected2)
-    }
+	
+	ResponseJSONTest(rec2, ctype2, expected2, t)
 
 	// Request 3: Ensure correct behaviour when sending an empty search param
 	// Create a ResponseRecorder to record the response.
@@ -118,6 +125,7 @@ func TestHandler(t *testing.T) {
 
 	// Create a request to pass to our handler. 
 	req4, err4 := http.NewRequest("POST", "http://localhost4041/", nil)
+
 	ResponseCodeTest(rec4, req4, err4, http.StatusMethodNotAllowed, t)
 
 	// Request 5: Ensure correct behaviour when sending no search param
@@ -126,6 +134,7 @@ func TestHandler(t *testing.T) {
 
 	// Create a request to pass to our handler. 
 	req5, err5 := http.NewRequest(http.MethodGet, "http://localhost4041/", nil)
+
 	ResponseCodeTest(rec5, req5, err5, http.StatusBadRequest, t)	
 
 	// Request 6: Ensure correct behaviour when sending unsupported characters for database query
@@ -134,5 +143,6 @@ func TestHandler(t *testing.T) {
 
 	// Create a request to pass to our handler. 
 	req6, err6 := http.NewRequest(http.MethodGet, "http://localhost4041/?search=don%27t", nil)
+	
 	ResponseCodeTest(rec6, req6, err6, http.StatusInternalServerError, t)	
 }
