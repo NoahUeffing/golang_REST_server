@@ -28,5 +28,3 @@ Currently other URL character encoding is not supported (ex. %22 for double quot
 Manually tested using Google Chrome and Mozilla Firefox.
 
 Implmentation includes adding artist and album names from their respective tables. [Database info](https://data-xtractor.com/knowledgebase/chinook-database-sample/)
-
-Search queries should return all
