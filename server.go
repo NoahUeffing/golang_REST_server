@@ -16,6 +16,7 @@ import (
 )
 
 // struct used for converting track data to json form
+// Null datatypes are used in case attributes are missing for track instances
 type Track struct {
     TrackId NullInt64 `json:"TrackId"`
     Name NullString `json:"Name"`
