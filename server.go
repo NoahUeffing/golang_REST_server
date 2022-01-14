@@ -8,18 +8,18 @@ package main
 import (
 	"log"
 	"os"
-    "fmt"
+	"fmt"
 	"net/http"
-    "database/sql"
+	"database/sql"
 	"encoding/json"
-    _ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // struct used for converting track data to json form
 // Null datatypes are used in case attributes are missing for track instances
 type Track struct {
-    TrackId NullInt64 `json:"TrackId"`
-    Name NullString `json:"Name"`
+	TrackId NullInt64 `json:"TrackId"`
+	Name NullString `json:"Name"`
 	Artist NullString `json:"Artist"`
 	Album NullString `json:"Album"`
 	AlbumId NullInt64 `json:"AlbumId"`
@@ -105,8 +105,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// log the recieved search query
 	log.Println("Received search query for: " + string(key))
 
-    // Open the database connection
-    db, err := sql.Open("sqlite3", "./Chinook_Sqlite.sqlite")
+	// Open the database connection
+	db, err := sql.Open("sqlite3", "./Chinook_Sqlite.sqlite")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("500 Error: Database connection error")
@@ -136,7 +136,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	count := 0
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, "[")
-    for results.Next() {
+	for results.Next() {
 		if err = results.Scan(&track.TrackId, &track.Name, &track.Artist, 
 			&track.Album, &track.AlbumId, &track.MediaTypeId, &track.GenreId,
 			&track.Composer, &track.Milliseconds, &track.Bytes, 
@@ -163,7 +163,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "]")
-    results.Close() 
+	results.Close() 
 	db.Close()
 	log.Println("Search query completed for: " + string(key))
 	return

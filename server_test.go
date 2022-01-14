@@ -14,29 +14,29 @@ func ResponseCodeTest(rec *httptest.ResponseRecorder, req *http.Request, err err
 
 	handler(rec, req)
 
-    // Check the status code is expected code
-    if rec.Code != status {
-        t.Errorf("handler returned wrong status code: got %v want %v",
-            rec.Code, status)
-    }
+	// Check the status code is expected code
+	if rec.Code != status {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			rec.Code, status)
+	}
 }
 
 func TestHandler(t *testing.T) {
 	// Request 1: Ensure correct behaviour when searching for "Jesus of Suburbia" 
-    // Create a ResponseRecorder 
-    rec1 := httptest.NewRecorder()
+	// Create a ResponseRecorder 
+	rec1 := httptest.NewRecorder()
 
-    // Create a request to pass to our handler. 
-    req1, err1 := http.NewRequest(http.MethodGet, "http://localhost4041/?search=jesus%20of%20suburbia", nil)
+	// Create a request to pass to our handler. 
+	req1, err1 := http.NewRequest(http.MethodGet, "http://localhost4041/?search=jesus%20of%20suburbia", nil)
 
 	ResponseCodeTest(rec1, req1, err1, http.StatusOK, t)
 
 	// Check that Content-Type = application/json
-    if ctype := rec1.Header().Get("Content-Type"); ctype != "application/json" {
-        t.Errorf("content type header does not match: \n\ngot\n\n %v \n\nwant\n\n %v",
-            ctype, "application/json")
-    }
-    // Check the response body vs expected body
+	if ctype := rec1.Header().Get("Content-Type"); ctype != "application/json" {
+		t.Errorf("content type header does not match: \n\ngot\n\n %v \n\nwant\n\n %v",
+			ctype, "application/json")
+	}
+	// Check the response body vs expected body
 	// Must be four spaces from margin (not tab) to correctly match output from server.go
     expected1 := `[{
     "TrackId": 1134,
@@ -51,14 +51,14 @@ func TestHandler(t *testing.T) {
     "Bytes": 17875209,
     "UnitPrice": 0.99
 }]`
-    if rec1.Body.String() != expected1 {
-        t.Errorf("handler returned unexpected body. got:\n\n%v\n\nwant\n\n%v",
-            rec1.Body.String(), expected1)
-    }
+	if rec1.Body.String() != expected1 {
+		t.Errorf("handler returned unexpected body. got:\n\n%v\n\nwant\n\n%v",
+			rec1.Body.String(), expected1)
+	}
 
 	// Request 2: Ensure correct behaviour when searching for "London"
-    // Create a ResponseRecorder to record the response.
-    rec2 := httptest.NewRecorder()
+	// Create a ResponseRecorder to record the response.
+	rec2 := httptest.NewRecorder()
 
 	// Create a request to pass to our handler. 
 	req2, err2 := http.NewRequest(http.MethodGet, "http://localhost4041/?search=london", nil)
@@ -66,11 +66,11 @@ func TestHandler(t *testing.T) {
 	ResponseCodeTest(rec2, req2, err2, http.StatusOK, t)
 
 	// Check that Content-Type = application/json
-    if ctype := rec2.Header().Get("Content-Type"); ctype != "application/json" {
-        t.Errorf("content type header does not match: \n\ngot\n\n %v \n\nwant\n\n %v",
-            ctype, "application/json")
-    }
-	 // Check the response body vs expected body
+	if ctype := rec2.Header().Get("Content-Type"); ctype != "application/json" {
+		t.Errorf("content type header does not match: \n\ngot\n\n %v \n\nwant\n\n %v",
+			ctype, "application/json")
+	}
+	// Check the response body vs expected body
 	// Must be four spaces from margin (not tab) to correctly match output from server.go
 	expected2 := `[{
     "TrackId": 2599,
@@ -105,7 +105,7 @@ func TestHandler(t *testing.T) {
 
 	// Request 3: Ensure correct behaviour when sending an empty search param
 	// Create a ResponseRecorder to record the response.
-    rec3 := httptest.NewRecorder()
+	rec3 := httptest.NewRecorder()
 
 	// Create a request to pass to our handler. 
 	req3, err3 := http.NewRequest(http.MethodGet, "http://localhost4041/?search=", nil)
@@ -114,7 +114,7 @@ func TestHandler(t *testing.T) {
 
 	// Request 4: Ensure correct behaviour when sending an unsupported method
 	// Create a ResponseRecorder to record the response.
-    rec4 := httptest.NewRecorder()
+	rec4 := httptest.NewRecorder()
 
 	// Create a request to pass to our handler. 
 	req4, err4 := http.NewRequest("POST", "http://localhost4041/", nil)
@@ -122,7 +122,7 @@ func TestHandler(t *testing.T) {
 
 	// Request 5: Ensure correct behaviour when sending no search param
 	// Create a ResponseRecorder to record the response.
-    rec5 := httptest.NewRecorder()
+	rec5 := httptest.NewRecorder()
 
 	// Create a request to pass to our handler. 
 	req5, err5 := http.NewRequest(http.MethodGet, "http://localhost4041/", nil)
@@ -130,7 +130,7 @@ func TestHandler(t *testing.T) {
 
 	// Request 6: Ensure correct behaviour when sending unsupported characters for database query
 	// Create a ResponseRecorder to record the response.
-    rec6 := httptest.NewRecorder()
+	rec6 := httptest.NewRecorder()
 
 	// Create a request to pass to our handler. 
 	req6, err6 := http.NewRequest(http.MethodGet, "http://localhost4041/?search=don%27t", nil)
