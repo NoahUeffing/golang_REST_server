@@ -8,7 +8,9 @@
 
 - SQLite (I used version 3.36.0)
 
-# Useage:
+- Docker (if building and running a Docker image as a container)
+
+# Local Useage:
 
 Run the server by using the command "go run server.go" in the project directory.
 
@@ -22,10 +24,16 @@ Log will display recieved and completed search queries as well as error codes fo
 
 Note that "%20" is used to denote spaces in the URL search parameter, %27 for apostrophe, %3B for semicolon etc. See all character encodings [here.](https://www.w3schools.com/tags/ref_urlencode.ASP)
 
+Run testing script by using the command "go test" in the project directory.
+
+# Docker Useage:
+
+To build the Docker image, with Docker running, use the command "docker build --tag golang-rest-server ./" in the project directory.
+
+Then to run the Docker image as a container, use the command "docker run --publish 4041:4041 golang-rest-server" in the project directory.
+
 # Details:
 
-Manually tested using Google Chrome and Mozilla Firefox.
-
-Run testing script by using the command "go test" in the project directory.
+Manually tested using Google Chrome, Mozilla Firefox and Postman.
 
 Implmentation includes adding artist and album names from their respective tables. [Database info](https://data-xtractor.com/knowledgebase/chinook-database-sample/)
