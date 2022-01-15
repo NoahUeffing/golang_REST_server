@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"strings"
+	"strconv"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -88,8 +89,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			"405 Error: Method not allowed")
 		return
 	}
-	// Read the URL for search parameter
-	keys, ok := r.URL.Query()["search"]
+	// Read the URL for parameters
+	searchTerms, ok := r.URL.Query()["search"]
+	inputLimit := r.URL.Query()["limit"]
+	inputOffset := r.URL.Query()["offset"]
 
 	// Error checking for search parameter
 	if !ok {
@@ -98,20 +101,29 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If search parameter is empty, give error
-	if len(keys[0]) < 1 {
+	if len(searchTerms[0]) < 1 {
 		errorHandler(w, http.StatusBadRequest, 
 			"400 Error: No valid search criteria")
 		return
 	}
 
-	// Query()["key"] will return an array of parameters, 
-	// we only want a single parameter string
-	key := keys[0]
+	// Query()["search"] will return an array of parameters, 
+	// we only want a single parameter
+	search := searchTerms[0]
+	var limit string
+	var offset string
+	if len(inputLimit) > 0 {
+		limit = inputLimit[0]
+	}
+	if len(inputOffset) > 0 {
+		offset = inputOffset[0]
+	}
+	
 	// Replace ' with '' for SQL query functionality
-	key = strings.Replace(key, "'", "''", -1) 
+	search = strings.Replace(search, "'", "''", -1) 
 
 	// log the recieved search query
-	log.Println("Received search query for: " + string(key))
+	log.Println("Received search query for: " + string(search))
 
 	// Open the database connection
 	db, err := sql.Open("sqlite3", "./Chinook_Sqlite.sqlite")
@@ -121,17 +133,62 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create the query
+	// Create the query to search for tracks and order by best match
+	// query for non limit or offset
 	query := "SELECT track.TrackId, track.Name, artist.Name, album.Title, " + 
-	"track.AlbumId, track.MediaTypeId, track.GenreId, track.Composer, " + 
-	"track.Milliseconds, track.Bytes, track.UnitPrice " + 
-	"FROM track " + 
-	"INNER JOIN album ON track.AlbumId = album.AlbumId " +
-	"INNER JOIN artist ON album.ArtistId = artist.ArtistId " + 
-	"WHERE track.Name LIKE '%" + string(key) + "%'"
-
+		"track.AlbumId, track.MediaTypeId, track.GenreId, track.Composer, " + 
+		"track.Milliseconds, track.Bytes, track.UnitPrice " + 
+		"FROM track " + 
+		"INNER JOIN album ON track.AlbumId = album.AlbumId " +
+		"INNER JOIN artist ON album.ArtistId = artist.ArtistId " + 
+		"WHERE track.Name LIKE '%" + string(search) + "%' " +
+		"ORDER BY (CASE WHEN track.Name = '" + string(search) + "' THEN 1 " +
+		"WHEN track.name LIKE '" + string(search) + "%' THEN 2 ELSE 3 END), " + 
+		"track.Name"
+	// query with limit
+	query1 := "SELECT track.TrackId, track.Name, artist.Name, album.Title, " + 
+		"track.AlbumId, track.MediaTypeId, track.GenreId, track.Composer, " + 
+		"track.Milliseconds, track.Bytes, track.UnitPrice " + 
+		"FROM track " + 
+		"INNER JOIN album ON track.AlbumId = album.AlbumId " +
+		"INNER JOIN artist ON album.ArtistId = artist.ArtistId " + 
+		"WHERE track.Name LIKE '%" + string(search) + "%' " +
+		"ORDER BY (CASE WHEN track.Name = '" + string(search) + "' THEN 1 " +
+		"WHEN track.name LIKE '" + string(search) + "%' THEN 2 ELSE 3 END), " + 
+		"track.Name LIMIT " + string(limit)
+	// query with limit and offset
+	query2 := "SELECT track.TrackId, track.Name, artist.Name, album.Title, " + 
+		"track.AlbumId, track.MediaTypeId, track.GenreId, track.Composer, " + 
+		"track.Milliseconds, track.Bytes, track.UnitPrice " + 
+		"FROM track " + 
+		"INNER JOIN album ON track.AlbumId = album.AlbumId " +
+		"INNER JOIN artist ON album.ArtistId = artist.ArtistId " + 
+		"WHERE track.Name LIKE '%" + string(search) + "%' " +
+		"ORDER BY (CASE WHEN track.Name = '" + string(search) + "' THEN 1 " +
+		"WHEN track.name LIKE '" + string(search) + "%' THEN 2 ELSE 3 END), " + 
+		"track.Name LIMIT " + string(limit) + " OFFSET " + string(offset)
+	
 	// Search the database
-	results, err := db.Query(query)
+	var results *sql.Rows
+	if len(limit) < 1 {
+		results, err = db.Query(query) 
+	} else if len(offset) < 1 {
+		if _, err := strconv.Atoi(limit); err != nil {
+			errorHandler(w, http.StatusBadRequest, "400 Error: Bad request")
+			return
+		} 
+		results, err = db.Query(query1)
+	} else {
+		if _, err := strconv.Atoi(limit); err != nil {
+			errorHandler(w, http.StatusBadRequest, "400 Error: Bad request")
+			return
+		} 
+		if _, err := strconv.Atoi(offset); err != nil {
+			errorHandler(w, http.StatusBadRequest, "400 Error: Bad request")
+			return
+		}
+		results, err = db.Query(query2)
+	}
 	if err != nil {
 		errorHandler(w, http.StatusInternalServerError, 
 			"500 Error: Database error")
@@ -172,7 +229,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "]")
 	results.Close() 
 	db.Close()
-	log.Println("Search query completed for: " + string(key))
+	log.Println("Search query completed for: " + string(search))
 	return
 }
 
